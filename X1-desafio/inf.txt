@@ -1,0 +1,146 @@
+DESAFÍO 3 · JWT: FORJAR Y FALSIFICAR UN TOKEN
+
+3.1 y 3.2 · Crear, verificar y falsificar un JWT
+
+En este desafío trabajé con JWT (JSON Web Token). La idea principal fue entender
+cómo funciona la firma de un JWT y por qué sirve para evitar que alguien modifique
+su contenido.
+
+Un JWT tiene tres partes separadas por puntos:
+
+header.payload.firma
+
+El header indica el algoritmo utilizado. En mi caso utilicé:
+
+{
+  "alg": "HS256",
+  "typ": "JWT"
+}
+
+El payload contiene la información del usuario, por ejemplo:
+
+{
+  "sub": "lectora-001",
+  "roles": ["lectora"]
+}
+
+La firma se genera utilizando HMAC-SHA256, el header, el payload y una clave
+secreta.
+
+En Node.js utilicé createHmac de node:crypto para generar la firma.
+
+Primero creé una función emitir(payload), que toma el payload, convierte el
+header y el payload a base64url, genera la firma y finalmente junta las tres
+partes para formar el JWT completo.
+
+Después creé una función verificar(token). Esta función separa el token en
+header, payload y firma. Luego vuelve a calcular la firma utilizando la misma
+clave secreta y compara la firma calculada con la firma que venía en el token.
+
+Para comparar las firmas utilicé timingSafeEqual, en vez de comparar directamente
+con ===. Esto evita problemas relacionados con ataques de temporización.
+
+Al verificar el token original, la firma coincide y el resultado es válido.
+
+Después hice una falsificación. Tomé el token original, decodifiqué el payload y
+cambié:
+
+"roles": ["lectora"]
+
+por:
+
+"roles": ["bibliotecario"]
+
+Luego volví a codificar el payload, pero mantuve la firma original.
+
+El token falsificado fue rechazado porque al cambiar el payload también cambia el
+texto que se debe firmar. Por lo tanto, la firma original ya no corresponde al
+contenido nuevo.
+
+Esto demuestra que la firma protege la integridad y autenticidad del JWT:
+permite comprobar que el token es válido y que nadie modificó su contenido.
+
+Sin embargo, la firma no protege la confidencialidad. El contenido del JWT no
+está encriptado y cualquier persona que tenga el token puede leer el header y
+el payload.
+
+Por eso nunca se deberían guardar contraseñas, claves secretas, datos bancarios
+u otra información sensible dentro de un JWT.
+
+
+3.3 · El ataque con alg: none
+
+Después creé un segundo archivo llamado ingenuo.mjs para demostrar un problema
+de seguridad.
+
+Hice un verificador ingenuo que lee el algoritmo directamente desde el header
+del JWT.
+
+El token forjado tenía:
+
+{
+  "alg": "none",
+  "typ": "JWT"
+}
+
+Y el payload tenía:
+
+{
+  "sub": "lectora-001",
+  "roles": ["bibliotecario"]
+}
+
+Además, dejé la firma vacía. Por eso el token termina en un punto:
+
+header.payload.
+
+El verificador ingenuo revisa el header y, si encuentra:
+
+"alg": "none"
+
+acepta el token sin comprobar ninguna firma.
+
+Esto significa que pude crear un token con el rol "bibliotecario" sin conocer la
+clave secreta.
+
+Este comportamiento es inseguro porque el cliente puede controlar el contenido
+del header y decirle al servidor que no quiere utilizar una firma.
+
+
+3.4 · Comprobación con el verificador estricto
+
+Finalmente pasé el mismo token forjado con "alg": "none" al verificador estricto
+que había creado anteriormente.
+
+El verificador estricto rechazó el token indicando que la firma era inválida.
+
+La razón es que el verificador estricto no confía en el algoritmo indicado por el
+cliente. Siempre calcula nuevamente la firma usando HMAC-SHA256 y la clave
+secreta.
+
+Después compara la firma calculada con la firma recibida usando timingSafeEqual.
+
+Como el token forjado tiene la firma vacía, la firma calculada por el servidor
+no coincide con la firma recibida.
+
+Por eso el token es rechazado.
+
+La diferencia principal entre ambos verificadores es:
+
+- El verificador ingenuo confía en el "alg" que viene dentro del token.
+- El verificador estricto decide qué algoritmo utilizar y comprueba siempre la
+  firma.
+- El ataque con "alg": "none" funciona contra el verificador ingenuo.
+- El mismo ataque falla contra el verificador estricto.
+
+CONCLUSIÓN
+
+Con este desafío entendí que un JWT no está encriptado: su contenido se puede
+leer. Lo que protege la firma es la integridad y autenticidad del token.
+
+Si alguien modifica el payload, la firma deja de coincidir y el token debe ser
+rechazado.
+
+También entendí que nunca se debe confiar ciegamente en el algoritmo indicado
+por el propio token. El servidor debe controlar qué algoritmos acepta y debe
+verificar correctamente la firma antes de confiar en la información del JWT.

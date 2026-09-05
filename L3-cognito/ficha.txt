@@ -1,0 +1,11 @@
+REGION          = us-east-1
+USER_POOL_ID    =
+ISSUER          =
+JWKS_URI        =
+DOMINIO         =
+RESOURCE_SERVER = biblioteca
+SCOPE_LEER      =
+CLIENT_ID       =
+REDIRECT_URI    = http://localhost:4200/callback
+USUARIO         =
+CLAVE           =

@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { readFileSync } from 'node:fs';
 import { AppModule } from './app.module';
